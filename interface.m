@@ -1,18 +1,160 @@
 function Interface
     close all;
 
-    modelPath = 'trainedKNN_Blueberry.mat';
+    % ===== SETUP PATH =====
+    currentFile = mfilename('fullpath');
+    projectDir = fileparts(currentFile);
+    modelPath = fullfile(projectDir, 'trainedKNN_Blueberry.mat');
+    
+    % ===== LOAD MODEL =====
     if ~isfile(modelPath)
-        errordlg('Model klasifikasi blueberry tidak ditemukan. Jalankan training.m terlebih dahulu.', 'Model Error');
+        fprintf('\n❌ ERROR: Model tidak ditemukan!\n');
+        fprintf('Path: %s\n\n', modelPath);
+        fprintf('Solusi: Jalankan training.m terlebih dahulu\n');
+        errordlg(sprintf('Model tidak ditemukan!\n\nJalankan training.m terlebih dahulu.\n\nPath: %s', modelPath), 'Error');
         return;
     end
+    
     load(modelPath, 'mdl');
+    fprintf('✓ Interface GUI berhasil dimuat\n');
+    fprintf('✓ Model KNN siap digunakan\n');
 
+    % ===== CREATE MAIN FIGURE =====
     guiData = struct();
     guiData.model = mdl;
+    guiData.projectDir = projectDir;
     guiData.currentImage = [];
+    guiData.currentImagePath = '';
+    guiData.showAll = false;
 
-    mainFig = figure('Name', 'Klasifikasi Kematangan Blueberry', ...
+    mainFig = figure('Name', 'Klasifikasi Kematangan Blueberry - KNN', ...
+        'NumberTitle', 'off', 'MenuBar', 'none', ...
+        'Units', 'normalized', 'Position', [0.1 0.1 0.8 0.8], ...
+        'Color', [0.95 0.95 0.95]);
+
+    % ===== CREATE UI COMPONENTS =====
+    
+    % Title
+    uicontrol(mainFig, 'Style', 'text', 'Position', [20, 750, 600, 40], ...
+        'String', 'KLASIFIKASI KEMATANGAN BLUEBERRY - KNN', ...
+        'FontSize', 14, 'FontWeight', 'bold', ...
+        'BackgroundColor', [0.95 0.95 0.95], 'HorizontalAlignment', 'left');
+
+    % Buttons
+    guiData.btnSelect = uicontrol(mainFig, 'Style', 'pushbutton', ...
+        'String', 'Pilih Gambar', 'Position', [20, 700, 120, 35], ...
+        'FontSize', 11, 'FontWeight', 'bold', 'BackgroundColor', [0.2 0.7 0.9], ...
+        'ForegroundColor', 'w', 'Callback', {@selectImage_Callback, mainFig});
+
+    guiData.btnClear = uicontrol(mainFig, 'Style', 'pushbutton', ...
+        'String', 'Hapus Semua', 'Position', [150, 700, 120, 35], ...
+        'FontSize', 11, 'FontWeight', 'bold', 'BackgroundColor', [0.9 0.3 0.3], ...
+        'ForegroundColor', 'w', 'Callback', {@clearAll_Callback, mainFig});
+
+    % Image axes
+    guiData.axOrig = axes(mainFig, 'Position', [0.05 0.45 0.28 0.28]);
+    set(guiData.axOrig, 'XTick', [], 'YTick', []);
+    title(guiData.axOrig, 'Gambar Asli', 'FontSize', 11, 'FontWeight', 'bold');
+
+    guiData.axProc = axes(mainFig, 'Position', [0.36 0.45 0.28 0.28]);
+    set(guiData.axProc, 'XTick', [], 'YTick', []);
+    title(guiData.axProc, 'Preprocessing (28×28)', 'FontSize', 11, 'FontWeight', 'bold');
+
+    % Result panel
+    guiData.txtPrediction = uicontrol(mainFig, 'Style', 'text', ...
+        'Position', [0.67*1000, 620, 250, 50], 'FontSize', 16, 'FontWeight', 'bold', ...
+        'String', 'Prediksi: -', 'BackgroundColor', [0.95 0.95 0.95], ...
+        'ForegroundColor', [0.2 0.6 0.2], 'HorizontalAlignment', 'center');
+
+    guiData.txtConfidence = uicontrol(mainFig, 'Style', 'text', ...
+        'Position', [0.67*1000, 480, 250, 130], 'FontSize', 10, ...
+        'String', 'Confidence Score:\n\nimmature: -\nsemi-mature: -\nmature: -', ...
+        'BackgroundColor', [0.98 0.98 0.98], 'HorizontalAlignment', 'left', ...
+        'VerticalAlignment', 'top');
+
+    % Status bar
+    guiData.txtStatus = uicontrol(mainFig, 'Style', 'text', ...
+        'Position', [20, 20, 1000, 60], 'FontSize', 10, ...
+        'String', 'Siap untuk memproses gambar blueberry. Klik "Pilih Gambar" untuk memulai.', ...
+        'BackgroundColor', [0.92 0.92 0.92], 'HorizontalAlignment', 'left', ...
+        'VerticalAlignment', 'top');
+
+    guidata(mainFig, guiData);
+end
+
+% ===== CALLBACK FUNCTIONS =====
+
+function selectImage_Callback(hObject, eventdata, mainFig)
+    guiData = guidata(mainFig);
+    
+    [filename, pathname] = uigetfile({'*.jpg;*.png;*.bmp', 'Gambar (*.jpg, *.png, *.bmp)'});
+    if isequal(filename, 0), return; end
+
+    imagePath = fullfile(pathname, filename);
+    
+    try
+        I = imread(imagePath);
+    catch ME
+        msgbox(sprintf('Gagal membaca gambar!\n%s', ME.message), 'Error');
+        return;
+    end
+
+    % Preprocess
+    I_proc = imresize(I, [28 28]);
+    if size(I_proc, 3) == 3
+        I_proc = rgb2gray(I_proc);
+    end
+    I_proc = im2double(I_proc);
+
+    % Extract HOG & predict
+    hogFeat = extractHOGFeatures(I_proc);
+    hogFeat = single(hogFeat);
+    [label, scores] = predict(guiData.model, hogFeat);
+
+    % Display images
+    axes(guiData.axOrig);
+    imshow(I);
+    title('Gambar Asli', 'FontSize', 11, 'FontWeight', 'bold');
+
+    axes(guiData.axProc);
+    imshow(I_proc);
+    title('Preprocessing (28×28)', 'FontSize', 11, 'FontWeight', 'bold');
+
+    % Display results
+    set(guiData.txtPrediction, 'String', sprintf('Prediksi:\n%s', char(label)));
+    
+    scoreStr = 'Confidence Score:\n\n';
+    classNames = guiData.model.ClassNames;
+    for i = 1:length(classNames)
+        scoreStr = sprintf('%s%s: %.2f%%\n', scoreStr, string(classNames(i)), scores(i)*100);
+    end
+    set(guiData.txtConfidence, 'String', scoreStr);
+
+    % Status
+    set(guiData.txtStatus, 'String', ...
+        sprintf('✓ Gambar: %s\nPrediksi: %s (%.2f%%)', filename, char(label), max(scores)*100));
+
+    guiData.currentImage = I;
+    guiData.currentImagePath = imagePath;
+    guidata(mainFig, guiData);
+end
+
+function clearAll_Callback(hObject, eventdata, mainFig)
+    guiData = guidata(mainFig);
+    
+    cla(guiData.axOrig);
+    cla(guiData.axProc);
+    set(guiData.axOrig, 'XTick', [], 'YTick', []);
+    set(guiData.axProc, 'XTick', [], 'YTick', []);
+    
+    set(guiData.txtPrediction, 'String', 'Prediksi: -');
+    set(guiData.txtConfidence, 'String', 'Confidence Score:\n\nimmature: -\nsemi-mature: -\nmature: -');
+    set(guiData.txtStatus, 'String', 'Semua hasil telah dihapus. Klik "Pilih Gambar" untuk memulai lagi.');
+    
+    guiData.currentImage = [];
+    guiData.currentImagePath = '';
+    guidata(mainFig, guiData);
+end
         'NumberTitle', 'off', 'MenuBar', 'none', ...
         'Units', 'normalized', 'Position', [0.15 0.15 0.7 0.7], ...
         'Color', [0.95 0.95 0.95], 'DeleteFcn', @(~,~) disp('Interface Ditutup'));

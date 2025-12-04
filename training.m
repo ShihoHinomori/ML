@@ -3,17 +3,22 @@ clear; clc;
 % BLUEBERRY RIPENESS CLASSIFICATION - KNN Training Pipeline
 % Klasifikasi Kematangan Buah Blueberry menggunakan KNN
 
-currentPath = mfilename('fullpath');
-if contains(currentPath, 'ML')
-    MLIdx = strfind(currentPath, 'ML');
-    rootFolder = fullfile(currentPath(1:MLIdx+2), 'sample');
-else
-    rootFolder = fullfile(pwd, 'sample');
-end
+% ===== ROBUST PATH RESOLUTION =====
+currentFile = mfilename('fullpath');
+projectDir = fileparts(currentFile);
+rootFolder = fullfile(projectDir, 'sample');
+
 defaultK = 5;  % Number of neighbors
 
+% ===== VALIDASI FOLDER =====
 if ~exist(rootFolder, 'dir')
-    error('Folder dataset tidak ditemukan: %s. Pastikan struktur folder: sample/immature/, sample/mature/, sample/semi-mature/', rootFolder);
+    fprintf('\n❌ ERROR: Folder dataset tidak ditemukan!\n');
+    fprintf('Path yang dicari: %s\n\n', rootFolder);
+    fprintf('Solusi: Buat struktur folder berikut:\n');
+    fprintf('  %s\\sample\\immature\\\n', projectDir);
+    fprintf('  %s\\sample\\semi-mature\\\n', projectDir);
+    fprintf('  %s\\sample\\mature\\\n\n', projectDir);
+    error('Folder dataset tidak ditemukan: %s', rootFolder);
 end
 
 imds = imageDatastore(rootFolder, ...
