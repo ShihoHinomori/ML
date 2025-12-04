@@ -1,16 +1,19 @@
 clear; clc;
 
-currentPath = ml1;
+% BLUEBERRY RIPENESS CLASSIFICATION - KNN Training Pipeline
+% Klasifikasi Kematangan Buah Blueberry menggunakan KNN
+
+currentPath = mfilename('fullpath');
 if contains(currentPath, 'ML')
     MLIdx = strfind(currentPath, 'ML');
     rootFolder = fullfile(currentPath(1:MLIdx+2), 'sample');
 else
-    rootFolder = fullfile(ml1, 'sample');
+    rootFolder = fullfile(pwd, 'sample');
 end
-defaultK = 5;
+defaultK = 5;  % Number of neighbors
 
 if ~exist(rootFolder, 'dir')
-    error('Folder tidak ditemukan: %s', rootFolder);
+    error('Folder dataset tidak ditemukan: %s. Pastikan struktur folder: sample/immature/, sample/mature/, sample/semi-mature/', rootFolder);
 end
 
 imds = imageDatastore(rootFolder, ...
@@ -22,14 +25,18 @@ if isempty(imds.Files)
 end
 
 numImages = numel(imds.Files);
-fprintf('=== DATASET INFO ===\n');
-fprintf('Total gambar ditemukan: %d\n', numImages);
-fprintf('Distribusi kelas:\n');
+fprintf('\n========================================\n');
+fprintf('KLASIFIKASI KEMATANGAN BLUEBERRY - KNN\n');
+fprintf('========================================\n\n');
+fprintf('=== INFORMASI DATASET ===\n');
+fprintf('Total gambar blueberry: %d\n', numImages);
+fprintf('Distribusi per tingkat kematangan:\n');
 labelCounts = countEachLabel(imds);
 disp(labelCounts);
 
-fprintf('\n=== PREPROCESSING + HOG EXTRACTION ===\n');
-fprintf('Memproses gambar dan mengekstrak fitur HOG...\n');
+fprintf('\n=== PREPROCESSING & EKSTRAKSI FITUR HOG ===\n');
+fprintf('Memproses gambar blueberry (resize ke 28x28, konversi grayscale)...\n');
+fprintf('Mengekstrak Histogram of Oriented Gradients (HOG)...\n');
 
 I0 = readimage(imds, 1);
 I0 = imresize(I0, [28 28]);
@@ -69,17 +76,17 @@ Ytest = Y;
 
 fprintf('Using all %d samples for both training and testing\n', numImages);
 
-fprintf('\n=== TRAINING ===\n');
+fprintf('\n=== PELATIHAN MODEL KNN ===\n');
 k = defaultK;
-fprintf('Training KNN dengan k=%d...\n', k);
+fprintf('Melatih K-Nearest Neighbors (KNN) dengan k=%d neighbors...\n', k);
 
 tic;
 mdl = fitcknn(Xtrain, Ytrain, ...
               'NumNeighbors', k, ...
               'Distance', 'euclidean', ...
               'Standardize', true);
-save('trainedKNN_HOG.mat', 'mdl');
-fprintf('Model KNN berhasil disimpan ke "trainedKNN_HOG.mat"\n');
+save('trainedKNN_Blueberry.mat', 'mdl');
+fprintf('✓ Model KNN berhasil disimpan ke "trainedKNN_Blueberry.mat"\n');
 
 trainTime = toc;
 
@@ -89,17 +96,16 @@ predTime = toc;
 
 [acc, precision, recall, f1, support] = evaluateModelDetailed(Ytest, Ypred, uniqueLabels);
 
-fprintf('\n');
-fprintf('=== PERFORMANCE RESULTS ===\n');
-fprintf('Training Time: %.4f seconds\n', trainTime);
-fprintf('Prediction Time: %.4f seconds\n', predTime);
+fprintf('\n=== HASIL PERFORMA MODEL ===\n');
+fprintf('Waktu Training: %.4f detik\n', trainTime);
+fprintf('Waktu Prediksi: %.4f detik\n', predTime);
 fprintf('\n');
 
 displayClassificationReport(uniqueLabels, precision, recall, f1, support, acc);
 
 figure('Position', [100, 100, 800, 600]);
 confusionchart(Ytest, Ypred);
-title(sprintf('Confusion Matrix - KNN (k=%d, Accuracy=%.2f%%)', k, acc*100));
+title(sprintf('Confusion Matrix - Klasifikasi Kematangan Blueberry (k=%d, Akurasi=%.2f%%)', k, acc*100));
 
 function [acc, precision, recall, f1, support] = evaluateModelDetailed(Ytest, Ypred, uniqueLabels)
     acc = mean(Ypred == Ytest);
@@ -135,7 +141,7 @@ function [acc, precision, recall, f1, support] = evaluateModelDetailed(Ytest, Yp
 end
 
 function displayClassificationReport(labels, precision, recall, f1, support, accuracy)
-    fprintf('Classification report:\n\n');
+    fprintf('Classification Report - Klasifikasi Kematangan Blueberry:\n\n');
     fprintf('%12s %9s %8s %9s %9s\n', '', 'precision', 'recall', 'f1-score', 'support');
     fprintf('\n');
     

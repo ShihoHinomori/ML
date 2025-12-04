@@ -1,9 +1,9 @@
 function Interface
     close all;
 
-    modelPath = 'trainedKNN_HOG.mat';
+    modelPath = 'trainedKNN_Blueberry.mat';
     if ~isfile(modelPath)
-        errordlg('Model tidak ditemukan. Harap latih model terlebih dahulu.', 'Model Error');
+        errordlg('Model klasifikasi blueberry tidak ditemukan. Jalankan training.m terlebih dahulu.', 'Model Error');
         return;
     end
     load(modelPath, 'mdl');
@@ -12,10 +12,10 @@ function Interface
     guiData.model = mdl;
     guiData.currentImage = [];
 
-    mainFig = figure('Name', 'Digit Classification', ...
+    mainFig = figure('Name', 'Klasifikasi Kematangan Blueberry', ...
         'NumberTitle', 'off', 'MenuBar', 'none', ...
         'Units', 'normalized', 'Position', [0.15 0.15 0.7 0.7], ...
-        'Color', [0.95 0.95 0.95], 'DeleteFcn', @(~,~) disp('GUI Closed'));
+        'Color', [0.95 0.95 0.95], 'DeleteFcn', @(~,~) disp('Interface Ditutup'));
 
     guidata(mainFig, guiData);
     guiData = createUI(mainFig, guiData);
@@ -24,31 +24,31 @@ end
 
 function guiData = createUI(mainFig, guiData)
     
-    ctrlPanel = uipanel('Parent', mainFig, 'Title', 'Controls', ...
+    ctrlPanel = uipanel('Parent', mainFig, 'Title', 'Kontrol', ...
         'Units', 'normalized', 'Position', [0.05 0.7 0.25 0.25], ...
         'FontSize', 12, 'FontWeight', 'bold', 'BackgroundColor', [0.9 0.9 0.9]);
 
-    uicontrol(ctrlPanel, 'Style', 'pushbutton', 'String', 'Import Image', ...
+    uicontrol(ctrlPanel, 'Style', 'pushbutton', 'String', 'Pilih Gambar', ...
         'Units', 'normalized', 'Position', [0.1 0.6 0.8 0.3], ...
         'BackgroundColor', [0.2 0.7 0.9], 'ForegroundColor', 'w', ...
         'FontSize', 14, 'FontWeight', 'bold', 'Callback', @importImageCallback);
 
-    uicontrol(ctrlPanel, 'Style', 'pushbutton', 'String', 'Clear All', ...
+    uicontrol(ctrlPanel, 'Style', 'pushbutton', 'String', 'Hapus Semua', ...
         'Units', 'normalized', 'Position', [0.1 0.2 0.8 0.3], ...
         'BackgroundColor', [0.9 0.3 0.3], 'ForegroundColor', 'w', ...
         'FontSize', 14, 'FontWeight', 'bold', 'Callback', @clearAllCallback);
 
-    resultPanel = uipanel('Parent', mainFig, 'Title', 'Results', ...
+    resultPanel = uipanel('Parent', mainFig, 'Title', 'Hasil Prediksi', ...
         'Units', 'normalized', 'Position', [0.05 0.25 0.25 0.4], ...
         'FontSize', 12, 'FontWeight', 'bold', 'BackgroundColor', [0.9 0.9 0.9]);
 
     guiData.predText = uicontrol(resultPanel, 'Style', 'text', ...
-        'String', 'Prediction: -', 'FontSize', 16, 'FontWeight', 'bold', ...
+        'String', 'Prediksi: -', 'FontSize', 16, 'FontWeight', 'bold', ...
         'Units', 'normalized', 'Position', [0.05 0.85 0.9 0.12], ...
         'BackgroundColor', [0.9 0.9 0.9]);
 
     guiData.detailText = uicontrol(resultPanel, 'Style', 'text', ...
-        'String', 'Top 3 Results:', 'FontSize', 11, 'FontWeight', 'bold', ...
+        'String', 'Top 3 Hasil:', 'FontSize', 11, 'FontWeight', 'bold', ...
         'Units', 'normalized', 'Position', [0.05 0.75 0.9 0.08], ...
         'BackgroundColor', [0.9 0.9 0.9], 'HorizontalAlignment', 'left');
 
@@ -58,18 +58,18 @@ function guiData = createUI(mainFig, guiData)
         'BackgroundColor', [0.9 0.9 0.9], 'HorizontalAlignment', 'left');
 
     guiData.toggleButton = uicontrol(resultPanel, 'Style', 'pushbutton', ...
-        'String', 'Show All Results ▼', 'FontSize', 9, ...
+        'String', 'Tampilkan Semua Hasil ▼', 'FontSize', 9, ...
         'Units', 'normalized', 'Position', [0.05 0.05 0.9 0.15], ...
         'BackgroundColor', [0.7 0.7 0.7], 'Callback', @toggleResultsCallback);
 
     guiData.showAll = false;
 
-    imgPanel = uipanel('Parent', mainFig, 'Title', 'Image Processing', ...
+    imgPanel = uipanel('Parent', mainFig, 'Title', 'Pemrosesan Gambar', ...
         'Units', 'normalized', 'Position', [0.35 0.05 0.6 0.9], ...
         'FontSize', 12, 'FontWeight', 'bold', 'BackgroundColor', [0.9 0.9 0.9]);
 
     guiData.axesOriginal = axes('Parent', imgPanel, 'Position', [0.1 0.65 0.35 0.3]);
-    title(guiData.axesOriginal, 'Original Image', 'FontSize', 11, 'FontWeight', 'bold');
+    title(guiData.axesOriginal, 'Gambar Asli', 'FontSize', 11, 'FontWeight', 'bold');
     
     guiData.axesPreprocessed = axes('Parent', imgPanel, 'Position', [0.55 0.65 0.35 0.3]);
     title(guiData.axesPreprocessed, 'Grayscale', 'FontSize', 11, 'FontWeight', 'bold');
@@ -80,7 +80,7 @@ function guiData = createUI(mainFig, guiData)
 end
 
 function importImageCallback(~, ~)
-    [file, path] = uigetfile({'*.png;*.jpg;*.jpeg;*.bmp;*.tiff'}, 'Select an Image');
+    [file, path] = uigetfile({'*.png;*.jpg;*.jpeg;*.bmp;*.tiff'}, 'Pilih Gambar Blueberry');
     if isequal(file, 0), return; end
 
     I = imread(fullfile(path, file));
@@ -97,14 +97,14 @@ function clearAllCallback(~, ~)
     cla(guiData.axesPreprocessed);
     cla(guiData.axesFinal);
     
-    title(guiData.axesOriginal, 'Original Image', 'FontSize', 11, 'FontWeight', 'bold');
+    title(guiData.axesOriginal, 'Gambar Asli', 'FontSize', 11, 'FontWeight', 'bold');
     title(guiData.axesPreprocessed, 'Grayscale', 'FontSize', 11, 'FontWeight', 'bold');
     title(guiData.axesFinal, 'Final (28x28)', 'FontSize', 11, 'FontWeight', 'bold');
 
-    set(guiData.predText, 'String', 'Prediction: -');
-    set(guiData.detailText, 'String', 'Top 3 Results:');
+    set(guiData.predText, 'String', 'Prediksi: -');
+    set(guiData.detailText, 'String', 'Top 3 Hasil:');
     set(guiData.resultsText, 'String', '-');
-    set(guiData.toggleButton, 'String', 'Show All Results ▼');
+    set(guiData.toggleButton, 'String', 'Tampilkan Semua Hasil ▼');
     
     guiData.currentImage = [];
     guiData.showAll = false;
@@ -116,11 +116,11 @@ function toggleResultsCallback(~, ~)
     guiData.showAll = ~guiData.showAll;
     
     if guiData.showAll
-        set(guiData.detailText, 'String', 'All Results:');
-        set(guiData.toggleButton, 'String', 'Show Less ▲');
+        set(guiData.detailText, 'String', 'Semua Hasil:');
+        set(guiData.toggleButton, 'String', 'Tampilkan Lebih Sedikit ▲');
     else
-        set(guiData.detailText, 'String', 'Top 3 Results:');
-        set(guiData.toggleButton, 'String', 'Show All Results ▼');
+        set(guiData.detailText, 'String', 'Top 3 Hasil:');
+        set(guiData.toggleButton, 'String', 'Tampilkan Semua Hasil ▼');
     end
     
     guidata(gcf, guiData);
@@ -154,7 +154,7 @@ function processAndDisplayImage(I)
     [sortedScores, sortedIndices] = sort(scores, 'descend');
     classLabels = guiData.model.ClassNames;
     
-    set(guiData.predText, 'String', sprintf('Prediction: %s', string(label)));
+    set(guiData.predText, 'String', sprintf('Prediksi: %s', string(label)));
     
     resultsStr = '';
     if guiData.showAll
@@ -169,8 +169,8 @@ function processAndDisplayImage(I)
             break;
         end
         confidence = sortedScores(i) * 100;
-        digit = classLabels(sortedIndices(i));
-        resultsStr = sprintf('%sDigit %s: %.1f%%\n', resultsStr, string(digit), confidence);
+        ripeness = classLabels(sortedIndices(i));
+        resultsStr = sprintf('%s%s: %.1f%%\n', resultsStr, string(ripeness), confidence);
     end
     
     set(guiData.resultsText, 'String', resultsStr);
